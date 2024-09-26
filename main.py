@@ -35,8 +35,8 @@ Your task is to analyze a given book summary and identify the following that wou
 
 Once you have completed your analysis, return a detailed prompt that can be directly inputted in a model to generate the cover page of the book.
 The prompt doesnt need to include all of the above information but you need to devise a cover page using this information that will fit the best for the book and will be good for marketing the book.
-The design should remain appropriate for all audiences, avoiding content that could be perceived as offensive or harmful.
-Do not add title for the prompt like "Prompt for Generating Cover Pages for "The Merchant of Venice" in the output.
+The design should remain appropriate for all audiences, avoiding content that could be perceived as offensive or harmful or violent. Avoid using words like killing, nudity etc. Also avoid using just the portrait of a character as the cover page.
+Do not add title for the prompt like "Prompt for Generating Cover Pages for" in the output.
 Dont add any text in the image
 Here is the Book summary: <<summary>>
 """
@@ -52,6 +52,6 @@ def get_image(prompt):
     credentials = service_account.Credentials.from_service_account_info(gcp_credentials)
     gcp_project_id = gcp_credentials["project_id"]
     aiplatform.init(project=gcp_project_id, credentials=credentials)
-    model = ImageGenerationModel.from_pretrained("imagegeneration@005")
+    model = ImageGenerationModel.from_pretrained("imagegeneration@006")
     image = model.generate_images(prompt=prompt)
     image[0].save(location="./gen-img1.png", include_generation_parameters=True)
