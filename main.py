@@ -52,6 +52,15 @@ def get_image(prompt):
     credentials = service_account.Credentials.from_service_account_info(gcp_credentials)
     gcp_project_id = gcp_credentials["project_id"]
     aiplatform.init(project=gcp_project_id, credentials=credentials)
-    model = ImageGenerationModel.from_pretrained("imagegeneration@006")
-    image = model.generate_images(prompt=prompt)
+
+    prompt_template = """ Generate a book cover art with the description given below. The composition should focus on aesthetics, ensuring no text is present in the image.
+Avoid any specific characters or copyrighted figures, ensuring compliance with community guidelines.
+Ensure that you generate just the art and not the actual image of a book. 
+<<desc>>
+"""
+
+    neg_prompt = "no text, no actual images of a book"
+    image_prompt = prompt_template.replace('<<desc>>', prompt)
+    model = ImageGenerationModel.from_pretrained("imagen-3.0-generate-001")
+    image = model.generate_images(prompt=image_prompt, negative_prompt = neg_prompt)
     image[0].save(location="./gen-img1.png", include_generation_parameters=True)

@@ -6,20 +6,20 @@ st.title("AI Book Cover Generator")
 
 
 # Input field to accept the book summary
-book_summary = st.text_area("Enter the Book Summary:", height=300)
+book_description = st.text_area("Enter the Book description:", height=300)
 
 # Button to generate the cover prompt and image
 if st.button("Generate Book Cover"):
-    if book_summary:
+    if book_description:
         # Step 1: Generate the book cover prompt based on the book summary
-        st.write("Analyzing the book summary and generating a prompt for the cover page...")
-        cover_prompt = get_response(book_summary)
+        # st.write("Analyzing the book summary and generating a prompt for the cover page...")
+        # cover_prompt = get_response(book_summary)
 
         # Step 2: Generate the book cover image based on the generated prompt
         st.write("Generating the book cover image...")
-        get_image(cover_prompt)
-        st.markdown("### Generated Prompt:")
-        st.markdown(f"`{cover_prompt}`")
+        get_image(book_description)
+        # st.markdown("### Generated Prompt:")
+        # st.markdown(f"`{cover_prompt}`")
 
         # Step 3: Display the generated image
         image_path = './gen-img1.png'
