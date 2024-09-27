@@ -60,7 +60,7 @@ Ensure that you generate just the art and not the actual image of a book.
 <<desc>>
 """
 
-    neg_prompt = "no text, no actual images of a book"
+    neg_prompt = "Dont write any text"
     image_prompt = prompt_template.replace('<<desc>>', prompt)
     model = ImageGenerationModel.from_pretrained("imagen-3.0-generate-001")
     image = model.generate_images(prompt=image_prompt, negative_prompt = neg_prompt)
