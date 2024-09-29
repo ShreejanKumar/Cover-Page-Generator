@@ -53,7 +53,7 @@ def get_image(prompt):
     gcp_project_id = gcp_credentials["project_id"]
     aiplatform.init(project=gcp_project_id, credentials=credentials)
 
-    prompt_template = """ Generate a book cover art with the description given below. Ensure no text is present in the image.
+    prompt_template = """ Generate an art with the description given below. Ensure no text is present in the image.
 Ignore the book name and the authors name.
 Avoid any specific characters or copyrighted figures, ensuring compliance with community guidelines.
 Ensure that you generate just the art and not the actual image of a book. 

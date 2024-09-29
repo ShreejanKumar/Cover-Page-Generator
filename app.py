@@ -115,7 +115,7 @@ if st.session_state.overlay_done:
         stroke_color = st.color_picker(f"{label} Stroke Color:", "#000000", key=f"{label}_stroke_color")
 
         # Ensure font path is correct (assuming fonts are in a 'fonts' directory)
-        font_path = os.path.join("fonts", font_style)
+        font_path = os.path.join(font_style)
         return {
             "label": label,
             "text": text,
