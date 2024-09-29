@@ -64,6 +64,7 @@ st.title("AI Book Cover Generator")
 if not st.session_state.image_generated and not st.session_state.overlay_done:
     # Input field to accept the book summary
     book_description = st.text_area("Enter the Book Description:", height=300)
+    aspect_ratio = st.text_input("Enter Aspect ratio", value="9:16")
 
     # Button to generate the cover prompt and image
     if st.button("Generate Book Cover"):
@@ -71,7 +72,7 @@ if not st.session_state.image_generated and not st.session_state.overlay_done:
             with st.spinner("Generating the book cover image..."):
                 try:
                     # Step 2: Generate the book cover image based on the book description
-                    get_image(book_description)  # Ensure this saves the image at './gen-img1.png'
+                    get_image(book_description, aspect_ratio)  # Ensure this saves the image at './gen-img1.png'
                     st.session_state.image_generated = True
                     st.session_state.original_image_path = './gen-img1.png'
                     st.session_state.current_image_path = './gen-img1.png'

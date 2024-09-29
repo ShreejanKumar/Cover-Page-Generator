@@ -47,7 +47,7 @@ Here is the Book summary: <<summary>>
     return response.text
 
 
-def get_image(prompt):
+def get_image(prompt, aspect_ratio):
     gcp_credentials = st.secrets["gcp_service_account"]
     credentials = service_account.Credentials.from_service_account_info(gcp_credentials)
     gcp_project_id = gcp_credentials["project_id"]
@@ -63,5 +63,5 @@ Ensure that you generate just the art and not the actual image of a book.
     neg_prompt = "Dont write any text"
     image_prompt = prompt_template.replace('<<desc>>', prompt)
     model = ImageGenerationModel.from_pretrained("imagen-3.0-generate-001")
-    image = model.generate_images(prompt=image_prompt, negative_prompt = neg_prompt)
+    image = model.generate_images(prompt=image_prompt, negative_prompt = neg_prompt, aspect_ratio = aspect_ratio )
     image[0].save(location="./gen-img1.png", include_generation_parameters=True)
