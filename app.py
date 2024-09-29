@@ -1,6 +1,6 @@
 import streamlit as st
 from PIL import Image, ImageDraw, ImageFont
-from main import get_response, get_image  # Ensure these functions are properly defined in main.py
+from main import get_response, get_image
 import os
 import shutil
 
@@ -25,14 +25,21 @@ def overlay_text(original_image_path, overlay_image_path, texts):
             font = ImageFont.load_default()
             st.warning(f"Font '{font_style}' not found. Using default font.")
 
-        draw.text(
-            position,
-            text,
-            font=font,
-            fill=text_color,
-            stroke_width=stroke_width,
-            stroke_fill=stroke_color
-        )
+        # Handle multiline text
+        lines = text.split('\n')
+        x, y = position
+        for line in lines:
+            draw.text(
+                (x, y),
+                line,
+                font=font,
+                fill=text_color,
+                stroke_width=stroke_width,
+                stroke_fill=stroke_color
+            )
+            # Calculate line height using getbbox instead of getsize
+            line_height = font.getbbox('A')[3] + 5  # Approximate line height
+            y += line_height
 
     combined = Image.alpha_composite(image, txt_layer)
     combined = combined.convert("RGB")  # Convert back to RGB to save in JPEG or PNG
@@ -77,7 +84,8 @@ if st.session_state.image_generated and not st.session_state.overlay_done:
         if st.button("Regenerate Image"):
             # Reset the state to allow regeneration
             st.session_state.image_generated = False
-            st.session_state.image_path = ""
+            st.session_state.original_image_path = ""
+            st.session_state.current_image_path = ""
             st.session_state.overlay_done = False
             st.write("Please generate a new image.")
 
@@ -92,11 +100,11 @@ if st.session_state.overlay_done:
     # Function to collect text parameters
     def get_text_inputs(label):
         st.subheader(label)
-        text = st.text_input(f"{label} Text:", key=f"{label}_text")
+        text = st.text_area(f"{label} Text:", key=f"{label}_text", height=100)
         font_size = st.number_input(f"{label} Font Size:", min_value=10, max_value=200, value=40, key=f"{label}_size")
         font_style = st.selectbox(
             f"{label} Font Style:",
-            options=["arial.ttf"],  # Add more font options as needed
+            options=["arial.ttf", "DejaVuSerif.ttf"],  # Add more font options as needed
             index=0,
             key=f"{label}_style"
         )
@@ -107,7 +115,7 @@ if st.session_state.overlay_done:
         stroke_color = st.color_picker(f"{label} Stroke Color:", "#000000", key=f"{label}_stroke_color")
 
         # Ensure font path is correct (assuming fonts are in a 'fonts' directory)
-        font_path = os.path.join(font_style)
+        font_path = os.path.join("fonts", font_style)
         return {
             "label": label,
             "text": text,
