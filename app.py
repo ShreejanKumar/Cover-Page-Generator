@@ -7,7 +7,7 @@ import shutil
 # Function to overlay text on image
 def overlay_text(original_image_path, overlay_image_path, texts):
     image = Image.open(original_image_path).convert("RGBA")
-    txt_layer = Image.new("RGBA", image.size, (255,255,255,0))
+    txt_layer = Image.new("RGBA", image.size, (255, 255, 255, 0))
     draw = ImageDraw.Draw(txt_layer)
 
     for text_info in texts:
@@ -38,7 +38,11 @@ def overlay_text(original_image_path, overlay_image_path, texts):
                 stroke_fill=stroke_color
             )
             # Calculate line height using getbbox instead of getsize
-            line_height = font.getbbox('A')[3] + 5  # Approximate line height
+            try:
+                line_height = font.getbbox('A')[3] + 5  # Approximate line height
+            except AttributeError:
+                # Fallback if getbbox is not available
+                line_height = font.getsize('A')[1] + 5
             y += line_height
 
     combined = Image.alpha_composite(image, txt_layer)
@@ -66,14 +70,19 @@ if not st.session_state.image_generated and not st.session_state.overlay_done:
         if book_description:
             with st.spinner("Generating the book cover image..."):
                 try:
-                    # Attempt to generate the image
+                    # Step 2: Generate the book cover image based on the book description
                     get_image(book_description)  # Ensure this saves the image at './gen-img1.png'
                     st.session_state.image_generated = True
                     st.session_state.original_image_path = './gen-img1.png'
                     st.session_state.current_image_path = './gen-img1.png'
                     st.success("Book cover image generated successfully!")
-                except InvalidArgument as e:
-                    st.error("The prompt could not be submitted due to Content Violation. Please modify your description and try again.")
+                except Exception as e:
+                    # Inspect the exception message to determine the cause
+                    error_message = str(e).lower()
+                    if "safety filter" in error_message or "prohibited words" in error_message:
+                        st.error("The prompt violates the content policy. Please modify your description and try again.")
+                    else:
+                        st.error("An error occurred while generating the image. Please try again.")
         else:
             st.error("Please enter a book description to generate a cover!")
 
@@ -118,7 +127,7 @@ if st.session_state.overlay_done:
         stroke_color = st.color_picker(f"{label} Stroke Color:", "#000000", key=f"{label}_stroke_color")
 
         # Ensure font path is correct (assuming fonts are in a 'fonts' directory)
-        font_path = os.path.join(font_style)
+        font_path = os.path.join("fonts", font_style)
         return {
             "label": label,
             "text": text,
@@ -141,16 +150,19 @@ if st.session_state.overlay_done:
         texts = [title_info, subtitle_info, author_info]
 
         # Check if at least one text is provided
-        if any(text['text'] for text in texts):
+        if any(text['text'].strip() for text in texts):
             with st.spinner("Applying text overlays..."):
-                # Create a copy of the original image for overlaying
-                overlay_image_path = 'overlayed_image.jpg'
-                shutil.copyfile(st.session_state.original_image_path, overlay_image_path)
+                try:
+                    # Create a copy of the original image for overlaying
+                    overlay_image_path = 'overlayed_image.jpg'
+                    shutil.copyfile(st.session_state.original_image_path, overlay_image_path)
 
-                # Apply text overlay on the copied image
-                output_image_path = overlay_text(st.session_state.original_image_path, overlay_image_path, texts)
-                st.session_state.current_image_path = output_image_path
-                st.success("Text overlays applied successfully!")
+                    # Apply text overlay on the copied image
+                    output_image_path = overlay_text(st.session_state.original_image_path, overlay_image_path, texts)
+                    st.session_state.current_image_path = output_image_path
+                    st.success("Text overlays applied successfully!")
+                except Exception as e:
+                    st.error("An error occurred while applying text overlays. Please try again.")
         else:
             st.error("Please provide at least one text to overlay.")
 
