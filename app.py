@@ -65,12 +65,15 @@ if not st.session_state.image_generated and not st.session_state.overlay_done:
     if st.button("Generate Book Cover"):
         if book_description:
             with st.spinner("Generating the book cover image..."):
-                # Step 2: Generate the book cover image based on the book description
-                get_image(book_description)  # Ensure this saves the image at './gen-img1.png'
-                st.session_state.image_generated = True
-                st.session_state.original_image_path = './gen-img1.png'
-                st.session_state.current_image_path = './gen-img1.png'
-                st.success("Book cover image generated successfully!")
+                try:
+                    # Attempt to generate the image
+                    get_image(book_description)  # Ensure this saves the image at './gen-img1.png'
+                    st.session_state.image_generated = True
+                    st.session_state.original_image_path = './gen-img1.png'
+                    st.session_state.current_image_path = './gen-img1.png'
+                    st.success("Book cover image generated successfully!")
+                except InvalidArgument as e:
+                    st.error("The prompt could not be submitted due to Content Violation. Please modify your description and try again.")
         else:
             st.error("Please enter a book description to generate a cover!")
 
