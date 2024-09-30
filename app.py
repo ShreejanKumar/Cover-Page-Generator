@@ -5,6 +5,7 @@ import os
 import shutil
 
 # Function to overlay text and image on image
+# Function to overlay text and image on image with shadow effect
 def overlay_text_and_image(original_image_path, overlay_image_path, texts, overlay_image_data=None, image_options=None):
     image = Image.open(original_image_path).convert("RGBA")
     txt_layer = Image.new("RGBA", image.size, (255, 255, 255, 0))
@@ -19,6 +20,8 @@ def overlay_text_and_image(original_image_path, overlay_image_path, texts, overl
         text_color = text_info['text_color']
         stroke_width = text_info['stroke_width']
         stroke_color = text_info['stroke_color']
+        shadow_color = text_info.get('shadow_color', None)  # Shadow color
+        shadow_offset = text_info.get('shadow_offset', (0, 0))  # Shadow offset
 
         try:
             font = ImageFont.truetype(font_style, font_size)
@@ -30,6 +33,17 @@ def overlay_text_and_image(original_image_path, overlay_image_path, texts, overl
         lines = text.split('\n')
         x, y = position
         for line in lines:
+            # Draw shadow first (if shadow is enabled)
+            if shadow_color and shadow_offset != (0, 0):
+                shadow_x, shadow_y = shadow_offset
+                draw.text(
+                    (x + shadow_x, y + shadow_y),
+                    line,
+                    font=font,
+                    fill=shadow_color
+                )
+
+            # Draw main text
             draw.text(
                 (x, y),
                 line,
@@ -57,6 +71,7 @@ def overlay_text_and_image(original_image_path, overlay_image_path, texts, overl
     combined = combined.convert("RGB")  # Convert back to RGB to save in JPEG or PNG
     combined.save(overlay_image_path)
     return overlay_image_path
+
 
 # Initialize Streamlit session state
 if 'image_generated' not in st.session_state:
@@ -134,6 +149,11 @@ if st.session_state.overlay_done:
         stroke_width = st.number_input(f"{label} Stroke Width:", min_value=0, max_value=10, value=2, key=f"{label}_stroke_width")
         stroke_color = st.color_picker(f"{label} Stroke Color:", "#000000", key=f"{label}_stroke_color")
         
+        # Shadow effect inputs
+        shadow_color = st.color_picker(f"{label} Shadow Color:", "#000000", key=f"{label}_shadow_color")
+        shadow_x = st.number_input(f"{label} Shadow X Offset:", min_value=-2000, max_value=2000, value=2, key=f"{label}_shadow_x")
+        shadow_y = st.number_input(f"{label} Shadow Y Offset:", min_value=-2000, max_value=2000, value=2, key=f"{label}_shadow_y")
+        
         font_path = os.path.join("fonts/", font_style)
         return {
             "label": label,
@@ -144,7 +164,9 @@ if st.session_state.overlay_done:
             "y": y,
             "text_color": text_color,
             "stroke_width": stroke_width,
-            "stroke_color": stroke_color
+            "stroke_color": stroke_color,
+            "shadow_color": shadow_color,
+            "shadow_offset": (shadow_x, shadow_y)
         }
 
     # Collect inputs for Title, Subtitle, Author
