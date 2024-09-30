@@ -4,12 +4,13 @@ from main import get_response, get_image
 import os
 import shutil
 
-# Function to overlay text on image
-def overlay_text(original_image_path, overlay_image_path, texts):
+# Function to overlay text and image on image
+def overlay_text_and_image(original_image_path, overlay_image_path, texts, overlay_image_data=None, image_options=None):
     image = Image.open(original_image_path).convert("RGBA")
     txt_layer = Image.new("RGBA", image.size, (255, 255, 255, 0))
     draw = ImageDraw.Draw(txt_layer)
 
+    # Add text overlays
     for text_info in texts:
         text = text_info['text']
         font_size = text_info['font_size']
@@ -37,15 +38,22 @@ def overlay_text(original_image_path, overlay_image_path, texts):
                 stroke_width=stroke_width,
                 stroke_fill=stroke_color
             )
-            # Calculate line height using getbbox instead of getsize
             try:
                 line_height = font.getbbox('A')[3] + 5  # Approximate line height
             except AttributeError:
-                # Fallback if getbbox is not available
                 line_height = font.getsize('A')[1] + 5
             y += line_height
 
     combined = Image.alpha_composite(image, txt_layer)
+
+    # Overlay the uploaded image if available
+    if overlay_image_data and image_options:
+        overlay_img = Image.open(overlay_image_data).convert("RGBA")
+        # Resize the overlay image to the desired dimensions
+        overlay_img = overlay_img.resize((image_options['width'], image_options['height']))
+        # Paste the overlay image at the specified position
+        combined.paste(overlay_img, (image_options['x'], image_options['y']), overlay_img)
+
     combined = combined.convert("RGB")  # Convert back to RGB to save in JPEG or PNG
     combined.save(overlay_image_path)
     return overlay_image_path
@@ -62,23 +70,23 @@ st.title("AI Book Cover Generator")
 
 # Step 1: Generate Book Cover
 if not st.session_state.image_generated and not st.session_state.overlay_done:
-    # Input field to accept the book summary
     book_description = st.text_area("Enter the Book Description:", height=300)
-    aspect_ratio = st.text_input("Enter Aspect ratio", value="9:16")
+    aspect_ratios = ['1:1', '9:16', '16:9', '4:3', '3:4']
+
+    # Selectbox with default value
+    selected_ratio = st.selectbox("Select Aspect Ratio", options=aspect_ratios, index=1)
 
     # Button to generate the cover prompt and image
     if st.button("Generate Book Cover"):
         if book_description:
             with st.spinner("Generating the book cover image..."):
                 try:
-                    # Step 2: Generate the book cover image based on the book description
-                    get_image(book_description, aspect_ratio)  # Ensure this saves the image at './gen-img1.png'
+                    get_image(book_description, selected_ratio)
                     st.session_state.image_generated = True
                     st.session_state.original_image_path = './gen-img1.png'
                     st.session_state.current_image_path = './gen-img1.png'
                     st.success("Book cover image generated successfully!")
                 except Exception as e:
-                    # Inspect the exception message to determine the cause
                     error_message = str(e).lower()
                     if "safety filter" in error_message or "prohibited words" in error_message:
                         st.error("The prompt violates the content policy. Please modify your description and try again.")
@@ -95,7 +103,6 @@ if st.session_state.image_generated and not st.session_state.overlay_done:
 
     with col1:
         if st.button("Regenerate Image"):
-            # Reset the state to allow regeneration
             st.session_state.image_generated = False
             st.session_state.original_image_path = ""
             st.session_state.current_image_path = ""
@@ -106,7 +113,7 @@ if st.session_state.image_generated and not st.session_state.overlay_done:
         if st.button("Proceed to Text Overlay"):
             st.session_state.overlay_done = True
 
-# Step 3: Text Overlay Inputs
+# Step 3: Text and Image Overlay Inputs
 if st.session_state.overlay_done:
     st.header("Add Text Overlays to Your Book Cover")
 
@@ -117,7 +124,7 @@ if st.session_state.overlay_done:
         font_size = st.number_input(f"{label} Font Size:", min_value=10, max_value=200, value=40, key=f"{label}_size")
         font_style = st.selectbox(
             f"{label} Font Style:",
-            options=["arial.ttf", "DejaVuSerif.ttf"],  # Add more font options as needed
+            options = ["arial.ttf", "Arialn.ttf", "ArialTh.ttf", "ARIBL0.ttf", "G_ari_bd.ttf", "G_ari_i.ttf", "GEO_AI__.ttf"],
             index=0,
             key=f"{label}_style"
         )
@@ -126,14 +133,13 @@ if st.session_state.overlay_done:
         text_color = st.color_picker(f"{label} Text Color:", "#FFFFFF", key=f"{label}_color")
         stroke_width = st.number_input(f"{label} Stroke Width:", min_value=0, max_value=10, value=2, key=f"{label}_stroke_width")
         stroke_color = st.color_picker(f"{label} Stroke Color:", "#000000", key=f"{label}_stroke_color")
-
-        # Ensure font path is correct (assuming fonts are in a 'fonts' directory)
-        font_path = os.path.join("fonts", font_style)
+        
+        font_path = os.path.join("fonts/", font_style)
         return {
             "label": label,
             "text": text,
             "font_size": font_size,
-            "font_style": font_path,  # Corrected to include directory
+            "font_style": font_path,
             "x": x,
             "y": y,
             "text_color": text_color,
@@ -146,36 +152,58 @@ if st.session_state.overlay_done:
     subtitle_info = get_text_inputs("Subtitle")
     author_info = get_text_inputs("Author Name")
 
+    # Image overlay section
+    st.subheader("Overlay an Image")
+
+    uploaded_image = st.file_uploader("Choose an image to overlay", type=["jpg", "png", "jpeg"])
+
+    if uploaded_image:
+        st.image(uploaded_image, caption="Uploaded Image for Overlay", use_column_width=True)
+
+        overlay_image_width = st.number_input("Overlay Image Width", min_value=10, max_value=2000, value=200)
+        overlay_image_height = st.number_input("Overlay Image Height", min_value=10, max_value=2000, value=200)
+        overlay_image_x = st.number_input("Overlay Image X Position", min_value=0, max_value=2000, value=50)
+        overlay_image_y = st.number_input("Overlay Image Y Position", min_value=0, max_value=2000, value=50)
+
+        image_options = {
+            'width': overlay_image_width,
+            'height': overlay_image_height,
+            'x': overlay_image_x,
+            'y': overlay_image_y
+        }
+    else:
+        image_options = None
+
     # Button to apply overlays
-    if st.button("Apply Text Overlays"):
+    if st.button("Apply Text and Image Overlays"):
         texts = [title_info, subtitle_info, author_info]
 
-        # Check if at least one text is provided
-        if any(text['text'].strip() for text in texts):
-            with st.spinner("Applying text overlays..."):
+        if any(text['text'].strip() for text in texts) or uploaded_image:
+            with st.spinner("Applying overlays..."):
                 try:
-                    # Create a copy of the original image for overlaying
                     overlay_image_path = 'overlayed_image.jpg'
                     shutil.copyfile(st.session_state.original_image_path, overlay_image_path)
-
-                    # Apply text overlay on the copied image
-                    output_image_path = overlay_text(st.session_state.original_image_path, overlay_image_path, texts)
+                    output_image_path = overlay_text_and_image(
+                        st.session_state.original_image_path,
+                        overlay_image_path,
+                        texts,
+                        uploaded_image,
+                        image_options
+                    )
                     st.session_state.current_image_path = output_image_path
-                    st.success("Text overlays applied successfully!")
+                    st.success("Overlays applied successfully!")
                 except Exception as e:
-                    st.error("An error occurred while applying text overlays. Please try again.")
+                    st.error(f"An error occurred: {e}")
         else:
-            st.error("Please provide at least one text to overlay.")
+            st.error("Please provide either text or an image to overlay.")
 
-    # Display the updated image
     if os.path.exists(st.session_state.current_image_path):
-        st.image(st.session_state.current_image_path, caption="Book Cover with Text Overlays", use_column_width=True)
+        st.image(st.session_state.current_image_path, caption="Book Cover with Overlays", use_column_width=True)
 
-        # Option to download the updated image
         with open(st.session_state.current_image_path, "rb") as img_file:
             st.download_button(
                 label="Download Updated Image",
                 data=img_file,
-                file_name="generated_book_cover_with_text.png",
+                file_name="generated_book_cover_with_text_and_image.png",
                 mime="image/png"
             )
