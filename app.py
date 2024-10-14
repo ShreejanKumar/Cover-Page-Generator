@@ -159,7 +159,7 @@ if st.session_state.overlay_done:
             with open(font_path, "wb") as f:
                 f.write(uploaded_font.getbuffer())
         else:
-            font_path = "arial.ttf"  # Default to Arial or a system font
+            font_path = "fonts/arial.ttf"  # Default to Arial or a system font
         
         return {
             "label": label,
