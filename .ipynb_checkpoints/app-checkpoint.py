@@ -3,8 +3,8 @@ from PIL import Image, ImageDraw, ImageFont
 from main import get_response, get_image
 import os
 import shutil
+import tempfile
 
-# Function to overlay text and image on image
 # Function to overlay text and image on image with shadow effect
 def overlay_text_and_image(original_image_path, overlay_image_path, texts, overlay_image_data=None, image_options=None):
     image = Image.open(original_image_path).convert("RGBA")
@@ -137,12 +137,10 @@ if st.session_state.overlay_done:
         st.subheader(label)
         text = st.text_area(f"{label} Text:", key=f"{label}_text", height=100)
         font_size = st.number_input(f"{label} Font Size:", min_value=10, max_value=200, value=40, key=f"{label}_size")
-        font_style = st.selectbox(
-            f"{label} Font Style:",
-            options = ["arial.ttf", "Arialn.ttf", "ArialTh.ttf", "ARIBL0.ttf", "G_ari_bd.ttf", "G_ari_i.ttf", "GEO_AI__.ttf"],
-            index=0,
-            key=f"{label}_style"
-        )
+        
+        # File uploader for font
+        uploaded_font = st.file_uploader(f"{label} Font (Optional TTF File):", type=["ttf"], key=f"{label}_font")
+        
         x = st.number_input(f"{label} X Coordinate:", min_value=0, max_value=2000, value=50, key=f"{label}_x")
         y = st.number_input(f"{label} Y Coordinate:", min_value=0, max_value=2000, value=50, key=f"{label}_y")
         text_color = st.color_picker(f"{label} Text Color:", "#FFFFFF", key=f"{label}_color")
@@ -154,7 +152,15 @@ if st.session_state.overlay_done:
         shadow_x = st.number_input(f"{label} Shadow X Offset:", min_value=-2000, max_value=2000, value=2, key=f"{label}_shadow_x")
         shadow_y = st.number_input(f"{label} Shadow Y Offset:", min_value=-2000, max_value=2000, value=2, key=f"{label}_shadow_y")
         
-        font_path = os.path.join("fonts/", font_style)
+        # Set the font path if a file is uploaded, otherwise use a default font
+        font_path = None
+        if uploaded_font is not None:
+            font_path = os.path.join("fonts/", uploaded_font.name)
+            with open(font_path, "wb") as f:
+                f.write(uploaded_font.getbuffer())
+        else:
+            font_path = "arial.ttf"  # Default to Arial or a system font
+        
         return {
             "label": label,
             "text": text,
@@ -168,6 +174,7 @@ if st.session_state.overlay_done:
             "shadow_color": shadow_color,
             "shadow_offset": (shadow_x, shadow_y)
         }
+
 
     # Collect inputs for Title, Subtitle, Author
     title_info = get_text_inputs("Title")
