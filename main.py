@@ -47,21 +47,27 @@ Here is the Book summary: <<summary>>
     return response.text
 
 
-def get_image(prompt, aspect_ratio):
+def get_image(prompt, aspect_ratio, number_of_images=4):
     gcp_credentials = st.secrets["gcp_service_account"]
     credentials = service_account.Credentials.from_service_account_info(gcp_credentials)
     gcp_project_id = gcp_credentials["project_id"]
     aiplatform.init(project=gcp_project_id, credentials=credentials)
 
-    prompt_template = """ Generate an art with the description given below. Ensure no text is present in the image.
-Ignore the book name and the authors name.
+    prompt_template = """Generate an art with the description given below. Ensure no text is present in the image.
+Ignore the book name and the author's name.
 Avoid any specific characters or copyrighted figures, ensuring compliance with community guidelines.
 Ensure that you generate just the art and not the actual image of a book. 
 <<desc>>
 """
 
-    neg_prompt = "Dont write any text"
+    neg_prompt = "Don't write any text"
     image_prompt = prompt_template.replace('<<desc>>', prompt)
     model = ImageGenerationModel.from_pretrained("imagen-3.0-generate-001")
-    image = model.generate_images(prompt=image_prompt, negative_prompt = neg_prompt, aspect_ratio = aspect_ratio )
-    image[0].save(location="./gen-img1.png", include_generation_parameters=True)
+    images = model.generate_images(prompt=image_prompt, negative_prompt=neg_prompt, aspect_ratio=aspect_ratio, number_of_images=number_of_images)
+
+    image_paths = []
+    for idx, img in enumerate(images):
+        path = f"./gen-img{idx+1}.png"
+        img.save(location=path, include_generation_parameters=True)
+        image_paths.append(path)
+    return image_paths
