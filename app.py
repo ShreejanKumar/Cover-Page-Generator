@@ -40,6 +40,21 @@ def read_password_from_sheet(sheet):
 def update_password_in_sheet(sheet, new_password):
     sheet.update_cell(1, 1, new_password)  # Updates the first cell (A1) with the new password
 
+
+
+# Function to generate font preview images
+def generate_font_preview(font_path, sample_text="Sample", font_size=30):
+    img = Image.new("RGBA", (200, 50), (255, 255, 255, 0))
+    draw = ImageDraw.Draw(img)
+    try:
+        font = ImageFont.truetype(font_path, font_size)
+    except IOError:
+        font = ImageFont.load_default()
+    
+    draw.text((10, 10), sample_text, font=font, fill="black")
+    return img
+
+
 # Initialize gspread client and access the sheet
 client = get_gspread_client()
 sheet = get_google_sheet(client, st.secrets["gemini"]["spreadsheet"])
@@ -167,6 +182,7 @@ if st.session_state['authenticated'] and not st.session_state['reset_mode']:
         combined = combined.convert("RGB")  # Convert back to RGB to save in JPEG or PNG
         combined.save(overlay_image_path)
         return overlay_image_path
+        
     # Title of the app
     st.title("AI Book Cover Generator")
 
@@ -178,18 +194,18 @@ if st.session_state['authenticated'] and not st.session_state['reset_mode']:
     
     # Step 1: Generate Book Cover
     if not st.session_state.images_generated and not st.session_state.overlay_done:
-        book_description = st.text_area("Enter the Book Description:", height=300)
-        aspect_ratios = ['1:1', '9:16', '16:9', '4:3', '3:4']
+        book_description = st.text_area("Enter the Book Cover Description:", height=300)
+        aspect_ratios = ["21:9", "16:9", "3:2", "5:4", "1:1", "4:5", "2:3", "9:16", "9:21"]
     
         # Selectbox with default value
-        selected_ratio = st.selectbox("Select Aspect Ratio", options=aspect_ratios, index=1)
+        selected_ratio = st.selectbox("Select Aspect Ratio", options=aspect_ratios, index=7)
     
         # Button to generate the cover prompt and image
         if st.button("Generate Book Covers"):
             if book_description:
                 with st.spinner("Generating book cover images..."):
                     try:
-                        image_paths = get_image(book_description, selected_ratio, number_of_images=4)
+                        image_paths = get_response(book_description, selected_ratio)
                         st.session_state.images_generated = True
                         st.session_state.original_image_paths = image_paths
                         st.session_state.selected_image_path = image_paths[0]  # Default selection
@@ -198,8 +214,6 @@ if st.session_state['authenticated'] and not st.session_state['reset_mode']:
                         error_message = str(e).lower()
                         if "safety filter" in error_message or "prohibited words" in error_message:
                             st.error("The prompt violates the content policy. Please modify your description and try again.")
-                        else:
-                            st.error("An error occurred while generating the images. Please try again.")
             else:
                 st.error("Please enter a book description to generate covers!")
     
@@ -207,17 +221,17 @@ if st.session_state['authenticated'] and not st.session_state['reset_mode']:
     if st.session_state.images_generated and not st.session_state.overlay_done:
         st.subheader("Select an Image to Proceed with Text Overlay")
         
-        # Display images in a grid (2x2)
-        cols = st.columns(2)
-        for idx, img_path in enumerate(st.session_state.original_image_paths):
-            with cols[idx % 2]:
-                if os.path.exists(img_path):
-                    image = Image.open(img_path)
-                    st.image(image, use_column_width=True, caption=f"Image {idx+1}")
-                    # Radio button for selection
-                    if st.button(f"Select Image {idx+1}", key=f"select_{idx}"):
-                        st.session_state.selected_image_path = img_path
-                        st.success(f"Image {idx+1} selected for text overlay.")
+        # # Display images in a grid (2x2)
+        # cols = st.columns(2)
+        # for idx, img_path in enumerate(st.session_state.original_image_paths):
+        #     with cols[idx % 2]:
+        #         if os.path.exists(img_path):
+        #             image = Image.open(img_path)
+        #             st.image(image, use_column_width=True, caption=f"Image {idx+1}")
+        #             # Radio button for selection
+        #             if st.button(f"Select Image {idx+1}", key=f"select_{idx}"):
+        #                 st.session_state.selected_image_path = img_path
+        #                 st.success(f"Image {idx+1} selected for text overlay.")
     
         st.image(st.session_state.selected_image_path, caption="Selected Image for Overlay", use_column_width=True)
     
