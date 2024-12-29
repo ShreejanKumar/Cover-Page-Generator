@@ -107,7 +107,7 @@ def get_response(prompt, aspect_ratio):
     prompt_llm = prompt_template.replace('<<prompt>>', prompt)
     sample_file_1 = PIL.Image.open(path)
     response = model.generate_content([prompt, sample_file_1])
-    st.write(response.text)
+    # st.write(response.text)
     # Regenerating Image with missing details
     if response.text != 'True':
         strength = 0.40
