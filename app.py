@@ -199,13 +199,14 @@ if st.session_state['authenticated'] and not st.session_state['reset_mode']:
     
         # Selectbox with default value
         selected_ratio = st.selectbox("Select Aspect Ratio", options=aspect_ratios, index=7)
+        stability_api_key = st.text_input("Enter your API key:")
     
         # Button to generate the cover prompt and image
         if st.button("Generate Book Covers"):
-            if book_description:
+            if book_description and stability_api_key:
                 with st.spinner("Generating book cover images..."):
                     try:
-                        image_paths = get_response(book_description, selected_ratio)
+                        image_paths = get_response(book_description, selected_ratio, stability_api_key)
                         st.session_state.images_generated = True
                         st.session_state.original_image_paths = image_paths
                         st.session_state.selected_image_path = image_paths[0]  # Default selection

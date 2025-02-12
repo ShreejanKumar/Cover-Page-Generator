@@ -24,23 +24,21 @@ def to_markdown(text):
   text = text.replace('•', ' *')
   return Markdown(textwrap.indent(text, '> ', predicate=lambda _: True))
 
-
-def send_generation_request(host, params,):
-    STABILITY_KEY = st.secrets["stability"]["api_key"]
+def send_generation_request(host, params, stability_key):
     headers = {
         "Accept": "image/*",
-        "Authorization": f"Bearer {STABILITY_KEY}"
+        "Authorization": f"Bearer {stability_key}"
     }
 
     # Encode parameters
     files = {}
     image = params.pop("image", None)
     mask = params.pop("mask", None)
-    if image is not None and image != '':
+    if image:
         files["image"] = open(image, 'rb')
-    if mask is not None and mask != '':
+    if mask:
         files["mask"] = open(mask, 'rb')
-    if len(files)==0:
+    if not files:
         files["none"] = ''
 
     # Send request
@@ -50,14 +48,13 @@ def send_generation_request(host, params,):
         files=files,
         data=params
     )
+    
     if not response.ok:
         st.error(f"An error occurred: {response.status_code}: {response.text}")
 
     return response
 
-def get_response(prompt, aspect_ratio):
-    STABILITY_KEY = st.secrets["stability"]["api_key"]
-    
+def get_response(prompt, aspect_ratio, stability_key):
     # Generating First Image
     negative_prompt = "Don't write any text"
     seed = 0 
@@ -66,19 +63,16 @@ def get_response(prompt, aspect_ratio):
     host = f"https://api.stability.ai/v2beta/stable-image/generate/sd3"
     
     params = {
-        "prompt" : prompt,
-        "negative_prompt" : negative_prompt,
-        "aspect_ratio" : aspect_ratio,
-        "seed" : seed,
-        "output_format" : output_format,
-        "model" : "sd3.5-large",
-        "mode" : "text-to-image"
+        "prompt": prompt,
+        "negative_prompt": negative_prompt,
+        "aspect_ratio": aspect_ratio,
+        "seed": seed,
+        "output_format": output_format,
+        "model": "sd3.5-large",
+        "mode": "text-to-image"
     }
     
-    response = send_generation_request(
-        host,
-        params
-    )
+    response = send_generation_request(host, params, stability_key)
     
     # Decode response
     output_image = response.content
@@ -92,7 +86,6 @@ def get_response(prompt, aspect_ratio):
     path = f"./generated_{seed}.{output_format}"
     with open(path, "wb") as f:
         f.write(output_image)
-    # st.image(path, caption="Generated Image", use_column_width=True)
 
     # Checking Image with LLM
     gemini_api_key = st.secrets["gemini"]["api_key"]
@@ -101,31 +94,29 @@ def get_response(prompt, aspect_ratio):
     credentials = service_account.Credentials.from_service_account_info(gcp_credentials)
     gcp_project_id = gcp_credentials["project_id"]
     aiplatform.init(project=gcp_project_id, credentials=credentials)
-    prompt_template = """I am giving you an Image and a prompt. I want you to analyse that Image and check if all the things mentioned in the prompt are present in it. IF they are present then return just True (Dont write anything else). Otherwise return a prompt in a similar way as the old prompt that contains only the changes that needs to made in the image. Bear in mind the details of the original prompt and dont give any instructions against that. Here is the prompt <<prompt>>"""
+
+    prompt_template = """I am giving you an Image and a prompt. I want you to analyse that Image and check if all the things mentioned in the prompt are present in it. IF they are present then return just True (Don't write anything else). Otherwise return a prompt in a similar way as the old prompt that contains only the changes that need to be made in the image. Bear in mind the details of the original prompt and don't give any instructions against that. Here is the prompt <<prompt>>"""
 
     model = genai.GenerativeModel('gemini-1.5-flash')
     prompt_llm = prompt_template.replace('<<prompt>>', prompt)
     sample_file_1 = PIL.Image.open(path)
     response = model.generate_content([prompt, sample_file_1])
-    # st.write(response.text)
+
     # Regenerating Image with missing details
     if response.text != 'True':
         strength = 0.40
         params = {
-            "image" : path,
-            "prompt" : response.text,
-            "negative_prompt" : negative_prompt,
-            "strength" : strength,
-            "seed" : seed,
+            "image": path,
+            "prompt": response.text,
+            "negative_prompt": negative_prompt,
+            "strength": strength,
+            "seed": seed,
             "output_format": output_format,
-            "model" : "sd3.5-large",
-            "mode" : "image-to-image"
+            "model": "sd3.5-large",
+            "mode": "image-to-image"
         }
         
-        response = send_generation_request(
-            host,
-            params
-        )
+        response = send_generation_request(host, params, stability_key)
         
         # Decode response
         output_image = response.content
@@ -140,10 +131,9 @@ def get_response(prompt, aspect_ratio):
         generated = f"generated_{seed}.{output_format}"
         with open(generated, "wb") as f:
             f.write(output_image)
-        image_paths = [generated]
-        return image_paths
-    image_paths = [path]
-    return image_paths
+        return [generated]
+
+    return [path]
 
 
 def get_image(prompt, aspect_ratio, number_of_images=4):
